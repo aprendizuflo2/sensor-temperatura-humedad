@@ -1,0 +1,37 @@
+function doGet(e) {
+  return handleRequest(e);
+}
+
+function doPost(e) {
+  return handleRequest(e);
+}
+
+function handleRequest(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("Lecturas"); // Asegúrate que se llame así
+
+    // Captura exacta de parámetros
+    var temp = e.parameter.temperature || "";
+    var hum = e.parameter.humidity || "";
+    var device = e.parameter.device || "";   // 👈 aquí debe ser "device", no "source"
+    var espacio = e.parameter.espacio || ""; // 👈 este también lo agregamos
+
+    var now = new Date();
+
+    // Guarda los 5 valores
+    sheet.appendRow([now, temp, hum, device, espacio]);
+
+    // Respuesta al Arduino
+    var result = { status: "OK", timestamp: now.toString() };
+    return ContentService
+      .createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    var error = { status: "ERROR", message: err.toString() };
+    return ContentService
+      .createTextOutput(JSON.stringify(error))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
