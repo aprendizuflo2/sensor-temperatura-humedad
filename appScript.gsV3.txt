@@ -1,0 +1,66 @@
+function doGet(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // --- Hojas ---
+    var lecturas = ss.getSheetByName("Lecturas");
+    var parametros = ss.getSheetByName("Parametros");
+
+    // --- Parámetros recibidos ---
+    var action = e.parameter.action || ""; // 'getParams' o 'sendData'
+    var device = e.parameter.device || "";
+    var temp = e.parameter.temperature || "";
+    var hum = e.parameter.humidity || "";
+    var espacio = e.parameter.espacio || "";
+
+    // --- Acción: obtener parámetros ---
+    if (action === "getParams") {
+      var data = obtenerParametros(parametros, device);
+      return ContentService
+        .createTextOutput(JSON.stringify(data))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // --- Acción: guardar lecturas ---
+    if (action === "sendData") {
+      var now = new Date();
+      lecturas.appendRow([now, temp, hum, device, espacio]);
+
+      var result = { status: "OK", timestamp: now.toString() };
+      return ContentService
+        .createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // --- Si no se envía acción válida ---
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: "ERROR", message: "Acción no válida" }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    var error = { status: "ERROR", message: err.toString() };
+    return ContentService
+      .createTextOutput(JSON.stringify(error))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function obtenerParametros(hoja, device) {
+  var data = hoja.getDataRange().getValues();
+  var headers = data[0];
+  var idxDevice = headers.indexOf("DEVICE");
+  var idxEspacio = headers.indexOf("ESPACIO");
+  var idxIntervalo = headers.indexOf("INTERVALO_MIN");
+
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][idxDevice] === device) {
+      return {
+        status: "OK",
+        device: data[i][idxDevice],
+        espacio: data[i][idxEspacio],
+        intervalo_min: data[i][idxIntervalo]
+      };
+    }
+  }
+  return { status: "NOT_FOUND", message: "Device no encontrado" };
+}
